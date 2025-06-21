@@ -1,5 +1,5 @@
 // Configuration
-const NEWS_API_KEY = 'YOUR_NEWS_API_KEY_HERE'; // Replace with your actual News API key
+const NEWS_API_KEY = '413a076a8ec74fcaa7466d61fda84a4a'; // Replace with your actual News API key
 const NEWS_API_BASE_URL = 'https://newsapi.org/v2';
 
 // State
