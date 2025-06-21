@@ -751,6 +751,8 @@
                 hideLoader();
             }
         }
+
+        
         
         // Fetch trending news
         async function fetchTrendingNews() {
@@ -952,6 +954,76 @@
             // Reset form
             contactForm.reset();
         }
+
+
+// Updated fetch function with CORS handling
+async function fetchNews(category, page = 1) {
+  try {
+    showLoader();
+    
+    // Use a proxy if needed (replace with your own proxy URL)
+    const proxyUrl = 'https://cors-anywhere.herokuapp.com/';
+    let apiUrl;
+    
+    if (isSearching) {
+      apiUrl = `https://newsapi.org/v2/everything?q=${currentSearchQuery}&page=${page}`;
+    } else {
+      apiUrl = category === 'general' 
+        ? `https://newsapi.org/v2/top-headlines?country=in&page=${page}`
+        : `https://newsapi.org/v2/top-headlines?country=in&category=${category}&page=${page}`;
+    }
+
+    const response = await fetch(proxyUrl + apiUrl, {
+      headers: {
+        'X-API-Key': API_KEY,
+        'Accept': 'application/json'
+      }
+    });
+
+    // Rest of your code...
+  } catch (error) {
+    console.error('Fetch error:', error);
+  }
+}
+
+
+// In your script.js
+const API_KEY = 'd44f128c378c43722a831cc284370e0b'; // Get from https://gnews.io/
+
+async function fetchNews(category) {
+  try {
+    const url = `https://gnews.io/api/v4/top-headlines?category=${category}&lang=en&country=in&max=10&apikey=${API_KEY}`;
+    const response = await fetch(url);
+    const data = await response.json();
+    
+    if (data.articles && data.articles.length > 0) {
+      displayNews(data.articles);
+    } else {
+      showError("No articles found. Try a different category.");
+    }
+  } catch (error) {
+    showError("Failed to load news. Check your API key and connection.");
+  }
+}
+
+// Update your displayNews function to match GNews structure:
+function displayNews(articles) {
+  newsContainer.innerHTML = '';
+  
+  articles.forEach(article => {
+    const newsCard = `
+      <div class="news-card">
+        <img src="${article.image || 'placeholder.jpg'}" class="news-img">
+        <div class="news-content">
+          <h3>${article.title}</h3>
+          <p>${article.description}</p>
+          <a href="${article.url}" target="_blank">Read More</a>
+        </div>
+      </div>
+    `;
+    newsContainer.innerHTML += newsCard;
+  });
+}        
     </script>
 </body>
 </html>
