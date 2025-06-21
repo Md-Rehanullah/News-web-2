@@ -1,10 +1,10 @@
 // Configuration
-const NEWS_API_KEY = '413a076a8ec74fcaa7466d61fda84a4a'; // Replace with your actual News API key
+const NEWS_API_KEY = 'e7eb2557a7794272b4ae7722c077e945'; // Replace with your actual News API key
 const NEWS_API_BASE_URL = 'https://newsapi.org/v2';
 
 // Check if API key is configured
 function checkApiKey() {
-    if (NEWS_API_KEY === '413a076a8ec74fcaa7466d61fda84a4a' || !NEWS_API_KEY) {
+    if (NEWS_API_KEY === 'e7eb2557a7794272b4ae7722c077e945' || !NEWS_API_KEY) {
         showApiKeyError();
         return false;
     }
