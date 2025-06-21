@@ -2,6 +2,15 @@
 const NEWS_API_KEY = '413a076a8ec74fcaa7466d61fda84a4a'; // Replace with your actual News API key
 const NEWS_API_BASE_URL = 'https://newsapi.org/v2';
 
+// Check if API key is configured
+function checkApiKey() {
+    if (NEWS_API_KEY === '413a076a8ec74fcaa7466d61fda84a4a' || !NEWS_API_KEY) {
+        showApiKeyError();
+        return false;
+    }
+    return true;
+}
+
 // State
 let currentCategory = 'general';
 let currentPage = 1;
@@ -162,6 +171,8 @@ function updateSectionTitle(category) {
 async function loadNews(category, page = 1) {
     if (isLoading) return;
     
+    if (!checkApiKey()) return;
+    
     isLoading = true;
     showLoading();
     
@@ -176,7 +187,13 @@ async function loadNews(category, page = 1) {
             url = `${NEWS_API_BASE_URL}/top-headlines?category=${category}&country=us&pageSize=12&page=${page}&apiKey=${NEWS_API_KEY}`;
         }
         
-        const response = await fetch(url);
+        const response = await fetch(url, {
+            method: 'GET',
+            headers: {
+                'X-API-Key': NEWS_API_KEY
+            }
+        });
+        
         const data = await response.json();
         
         if (data.status === 'ok') {
@@ -199,11 +216,12 @@ async function loadNews(category, page = 1) {
                 loadMoreContainer.style.display = 'none';
             }
         } else {
-            showError();
+            console.error('API Error:', data);
+            showError(`Error: ${data.message || 'Failed to load news'}`);
         }
     } catch (error) {
         console.error('Error loading news:', error);
-        showError();
+        showError('Failed to load news. Please check your internet connection and API key.');
     } finally {
         isLoading = false;
         hideLoading();
@@ -211,9 +229,16 @@ async function loadNews(category, page = 1) {
 }
 
 async function loadTrendingNews() {
+    if (!checkApiKey()) return;
+    
     try {
         const url = `${NEWS_API_BASE_URL}/top-headlines?country=us&pageSize=5&apiKey=${NEWS_API_KEY}`;
-        const response = await fetch(url);
+        const response = await fetch(url, {
+            method: 'GET',
+            headers: {
+                'X-API-Key': NEWS_API_KEY
+            }
+        });
         const data = await response.json();
         
         if (data.status === 'ok') {
@@ -344,12 +369,19 @@ async function performSearch() {
     const query = document.getElementById('searchInput').value.trim();
     if (!query) return;
     
+    if (!checkApiKey()) return;
+    
     const searchResults = document.getElementById('searchResults');
     searchResults.innerHTML = '<div class="loading"><div class="spinner"></div><p>Searching...</p></div>';
     
     try {
         const url = `${NEWS_API_BASE_URL}/everything?q=${encodeURIComponent(query)}&pageSize=10&sortBy=relevancy&apiKey=${NEWS_API_KEY}`;
-        const response = await fetch(url);
+        const response = await fetch(url, {
+            method: 'GET',
+            headers: {
+                'X-API-Key': NEWS_API_KEY
+            }
+        });
         const data = await response.json();
         
         if (data.status === 'ok') {
@@ -436,9 +468,31 @@ function hideLoading() {
     document.getElementById('loading').style.display = 'none';
 }
 
-function showError() {
+function showError(message = 'Failed to load news articles') {
     document.getElementById('loading').style.display = 'none';
-    document.getElementById('error').style.display = 'block';
+    const errorElement = document.getElementById('error');
+    errorElement.querySelector('p').textContent = message;
+    errorElement.style.display = 'block';
+    document.getElementById('featuredArticle').style.display = 'none';
+    document.getElementById('newsGrid').innerHTML = '';
+}
+
+function showApiKeyError() {
+    document.getElementById('loading').style.display = 'none';
+    const errorElement = document.getElementById('error');
+    errorElement.innerHTML = `
+        <div style="text-align: center; padding: 3rem 0;">
+            <p style="color: var(--news-red); margin-bottom: 1rem;">API Key Required</p>
+            <p style="margin-bottom: 1rem;">Please add your News API key to script.js:</p>
+            <ol style="text-align: left; max-width: 400px; margin: 0 auto 1rem;">
+                <li>Get a free API key from <a href="https://newsapi.org" target="_blank" style="color: var(--news-red);">NewsAPI.org</a></li>
+                <li>Open script.js in a text editor</li>
+                <li>Replace 'YOUR_NEWS_API_KEY_HERE' with your actual API key</li>
+                <li>Save and reload the page</li>
+            </ol>
+        </div>
+    `;
+    errorElement.style.display = 'block';
     document.getElementById('featuredArticle').style.display = 'none';
     document.getElementById('newsGrid').innerHTML = '';
 }
