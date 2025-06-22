@@ -101,7 +101,7 @@ async function loadNews(category, page = 1) {
   showLoading();
 
   try {
-    const categoryParam = {
+    const categoryMap = {
       general: 'top',
       world: 'world',
       sports: 'sports',
@@ -109,14 +109,14 @@ async function loadNews(category, page = 1) {
       business: 'business',
       entertainment: 'entertainment',
       trending: 'top'
-    }[category] || 'top';
-
-    const url = `https://newsdata.io/api/1/latest?apikey=${NEWS_API_KEY}&language=en&category=${categoryParam}&page=${page}`;
-    console.log("✅ Fetching URL:", url);
+    };
+    const catParam = categoryMap[category] || 'top';
+    const url = `https://newsdata.io/api/1/latest?apikey=${NEWS_API_KEY}&language=en&category=${catParam}&page=${page}`;
+    console.log("→ Fetching:", url);
 
     const res = await fetch(url);
     const data = await res.json();
-    console.log("✅ API Response:", data);
+    console.log("← API response", data);
 
     if (data.status === 'success' && Array.isArray(data.results)) {
       const filtered = data.results.filter(a => a.title && a.link);
@@ -128,7 +128,7 @@ async function loadNews(category, page = 1) {
       showError(`API Error: ${data.message || 'Unexpected response format'}`);
     }
   } catch (err) {
-    showError('Network error. Please try again.');
+    showError(`Network error: ${err.message}`);
     console.error(err);
   } finally {
     hideLoading();
