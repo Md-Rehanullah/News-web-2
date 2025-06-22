@@ -57,32 +57,42 @@ function updateSectionTitle(category) {
 }
 
 // Load news
+async function loadNews(category = 'top', page = 1) {
+  console.clear();
+  console.log("➡️ loadNews called", { category, page });
 
-async function loadNews(category='top', page=1) {
-  console.log("Loading category:", category, "page:", page);
+  const url = `https://newsdata.io/api/1/news?apikey=${NEWS_API_KEY}&language=en&category=${category}&page=${page}`;
+  console.log("🔗 Fetch URL:", url);
+
   try {
-    const url = `https://newsdata.io/api/1/news?apikey=${NEWS_API_KEY}&language=en&category=${category}&page=${page}`;
-    console.log("➤ Fetch URL:", url);
+    const res = await fetch(url, { cache: "no-store" });
+    console.log("📥 Response status:", res.status, res.statusText);
 
-    const res = await fetch(url);
     const text = await res.text();
-    console.log("⏎ Raw response text:", text);
+    console.log("📄 Raw response:", text);
+
     let data;
     try {
       data = JSON.parse(text);
     } catch (e) {
-      console.error("❌ JSON parse error:", e);
+      console.error("❌ JSON parse failed:", e);
       showError("Invalid JSON response");
       return;
     }
-    console.log("✅ Parsed response object:", data);
+    console.log("✅ Parsed data:", data);
 
-    // Pause here—don’t run filter yet! Just let me see what `data` looks like.
+    if (!data || typeof data !== 'object') {
+      showError("Empty or invalid response");
+      return;
+    }
+
+    // STOP HERE and share the console content with me.
   } catch (err) {
-    console.error("Fetch error:", err);
+    console.error("🌐 Fetch Error:", err);
     showError("Network error: " + err.message);
   }
 }
+
 // Display articles
 function displayArticles() {
     const featured = allArticles[0];
