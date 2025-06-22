@@ -1,10 +1,10 @@
 // Configuration
-const NEWS_API_KEY = "e7eb2557a7794272b4ae7722c077e945"; // Replace with your actual News API key
-const NEWS_API_BASE_URL = "https://newsapi.org/v2/everything?q";
+const NEWS_API_KEY = process.env.NEWS_API_KEY || '413a076a8ec74fcaa7466d61fda84a4a'; // Replace with your actual News API key
+const NEWS_API_BASE_URL = 'https://newsapi.org/v2';
 
 // Check if API key is configured
 function checkApiKey() {
-    if (NEWS_API_KEY === "e7eb2557a7794272b4ae7722c077e945" || !NEWS_API_KEY) {
+    if (NEWS_API_KEY === '413a076a8ec74fcaa7466d61fda84a4a' || !NEWS_API_KEY) {
         showApiKeyError();
         return false;
     }
@@ -187,14 +187,19 @@ async function loadNews(category, page = 1) {
             url = `${NEWS_API_BASE_URL}/top-headlines?category=${category}&country=us&pageSize=12&page=${page}&apiKey=${NEWS_API_KEY}`;
         }
         
+        console.log('Making request to:', url.replace(NEWS_API_KEY, '[API_KEY_HIDDEN]'));
+        
         const response = await fetch(url, {
             method: 'GET',
             headers: {
-                'X-API-Key': NEWS_API_KEY
+                'X-API-Key': NEWS_API_KEY,
+                'User-Agent': 'ClassicTimes/1.0'
             }
         });
         
+        console.log('Response status:', response.status);
         const data = await response.json();
+        console.log('Response data:', data);
         
         if (data.status === 'ok') {
             const filteredArticles = filterArticles(data.articles);
@@ -236,7 +241,8 @@ async function loadTrendingNews() {
         const response = await fetch(url, {
             method: 'GET',
             headers: {
-                'X-API-Key': NEWS_API_KEY
+                'X-API-Key': NEWS_API_KEY,
+                'User-Agent': 'ClassicTimes/1.0'
             }
         });
         const data = await response.json();
@@ -284,19 +290,19 @@ function displayFeaturedArticle(article) {
         <div class="featured-grid">
             <div>
                 <img src="${article.urlToImage || getPlaceholderImage()}" 
-                     alt="${article.title}" 
+                     alt="${escapeHtml(article.title)}" 
                      class="featured-image"
                      onerror="this.src='${getPlaceholderImage()}'">
             </div>
             <div class="featured-content">
                 <div class="featured-tag">FEATURED STORY</div>
-                <h2 class="featured-title">${article.title}</h2>
-                <p class="featured-description">${article.description || 'No description available.'}</p>
+                <h2 class="featured-title">${escapeHtml(article.title)}</h2>
+                <p class="featured-description">${escapeHtml(article.description || 'No description available.')}</p>
                 <div class="featured-meta">
                     <div class="article-meta">
-                        <span>${article.source.name}</span> • <span>${publishedDate}</span>
+                        <span>${escapeHtml(article.source.name)}</span> • <span>${publishedDate}</span>
                     </div>
-                    <button class="btn-primary" onclick="readMore('${article.url}')">
+                    <button class="btn-primary" onclick="readMore('${escapeHtml(article.url)}')">
                         Read More
                     </button>
                 </div>
@@ -321,17 +327,17 @@ function displayNewsGrid(articles) {
             <div class="news-card">
                 <div class="news-image-container">
                     <img src="${article.urlToImage || getPlaceholderImage()}" 
-                         alt="${article.title}" 
+                         alt="${escapeHtml(article.title)}" 
                          class="news-image"
                          onerror="this.src='${getPlaceholderImage()}'">
-                    <div class="news-source-tag">${article.source.name}</div>
+                    <div class="news-source-tag">${escapeHtml(article.source.name)}</div>
                 </div>
                 <div class="news-content">
-                    <h3 class="news-title">${article.title}</h3>
-                    <p class="news-description">${article.description || 'No description available.'}</p>
+                    <h3 class="news-title">${escapeHtml(article.title)}</h3>
+                    <p class="news-description">${escapeHtml(article.description || 'No description available.')}</p>
                     <div class="news-footer">
                         <span class="news-date">${publishedDate}</span>
-                        <button class="read-more-btn" onclick="readMore('${article.url}')">
+                        <button class="read-more-btn" onclick="readMore('${escapeHtml(article.url)}')">
                             Read More →
                         </button>
                     </div>
@@ -348,10 +354,10 @@ function displayTrendingArticles(articles) {
         <div class="trending-item">
             <div class="trending-number">${index + 1}</div>
             <div class="trending-content">
-                <h4 class="trending-title">${article.title}</h4>
+                <h4 class="trending-title">${escapeHtml(article.title)}</h4>
                 <div class="trending-footer">
-                    <span class="trending-source">${article.source.name}</span>
-                    <button class="read-more-btn" onclick="readMore('${article.url}')">
+                    <span class="trending-source">${escapeHtml(article.source.name)}</span>
+                    <button class="read-more-btn" onclick="readMore('${escapeHtml(article.url)}')">
                         Read →
                     </button>
                 </div>
@@ -379,7 +385,8 @@ async function performSearch() {
         const response = await fetch(url, {
             method: 'GET',
             headers: {
-                'X-API-Key': NEWS_API_KEY
+                'X-API-Key': NEWS_API_KEY,
+                'User-Agent': 'ClassicTimes/1.0'
             }
         });
         const data = await response.json();
@@ -402,7 +409,7 @@ function displaySearchResults(articles, query) {
     if (articles.length === 0) {
         searchResults.innerHTML = `
             <div class="text-center" style="padding: 2rem; color: var(--news-gray);">
-                <p>No articles found for "${query}"</p>
+                <p>No articles found for "${escapeHtml(query)}"</p>
                 <p style="font-size: 0.875rem; margin-top: 0.5rem;">Try searching with different keywords</p>
             </div>
         `;
@@ -411,11 +418,11 @@ function displaySearchResults(articles, query) {
     
     searchResults.innerHTML = articles.map(article => `
         <div class="search-result-item">
-            <h4 class="search-result-title" onclick="readMore('${article.url}')">${article.title}</h4>
-            <p class="search-result-description">${article.description || 'No description available.'}</p>
+            <h4 class="search-result-title" onclick="readMore('${escapeHtml(article.url)}')">${escapeHtml(article.title)}</h4>
+            <p class="search-result-description">${escapeHtml(article.description || 'No description available.')}</p>
             <div class="search-result-footer">
-                <span class="search-result-source">${article.source.name}</span>
-                <button class="read-more-btn" onclick="readMore('${article.url}')">
+                <span class="search-result-source">${escapeHtml(article.source.name)}</span>
+                <button class="read-more-btn" onclick="readMore('${escapeHtml(article.url)}')">
                     Read More →
                 </button>
             </div>
@@ -503,4 +510,15 @@ function updateArticleCount() {
 
 function getPlaceholderImage() {
     return 'https://images.unsplash.com/photo-1504711434969-e33886168f5c?ixlib=rb-4.0.3&auto=format&fit=crop&w=800&h=600';
+}
+
+function escapeHtml(text) {
+    const map = {
+        '&': '&amp;',
+        '<': '&lt;',
+        '>': '&gt;',
+        '"': '&quot;',
+        "'": '&#039;'
+    };
+    return text.replace(/[&<>"']/g, function(m) { return map[m]; });
 }
