@@ -57,34 +57,32 @@ function updateSectionTitle(category) {
 }
 
 // Load news
-async function loadNews(category = 'top', page = 1) {
-    isLoading = true;
-    showLoading();
+
+async function loadNews(category='top', page=1) {
+  console.log("Loading category:", category, "page:", page);
+  try {
+    const url = `https://newsdata.io/api/1/news?apikey=${NEWS_API_KEY}&language=en&category=${category}&page=${page}`;
+    console.log("➤ Fetch URL:", url);
+
+    const res = await fetch(url);
+    const text = await res.text();
+    console.log("⏎ Raw response text:", text);
+    let data;
     try {
-        let url = `${NEWS_API_BASE_URL}?apikey=${NEWS_API_KEY}&language=en&page=${page}&category=${category}`;
-        const response = await fetch(url);
-        const data = await response.json();
-
-        if (!data.results || !Array.isArray(data.results)) {
-            showError("Unexpected response format");
-            return;
-        }
-
-        const filtered = data.results.filter(a => a.title && a.link);
-        allArticles = page === 1 ? filtered : [...allArticles, ...filtered];
-
-        displayArticles();
-        updateArticleCount();
-        document.getElementById('loadMoreContainer').style.display = filtered.length >= 10 ? 'block' : 'none';
-    } catch (err) {
-        console.error(err);
-        showError('Failed to fetch news');
-    } finally {
-        isLoading = false;
-        hideLoading();
+      data = JSON.parse(text);
+    } catch (e) {
+      console.error("❌ JSON parse error:", e);
+      showError("Invalid JSON response");
+      return;
     }
-}
+    console.log("✅ Parsed response object:", data);
 
+    // Pause here—don’t run filter yet! Just let me see what `data` looks like.
+  } catch (err) {
+    console.error("Fetch error:", err);
+    showError("Network error: " + err.message);
+  }
+}
 // Display articles
 function displayArticles() {
     const featured = allArticles[0];
