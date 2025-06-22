@@ -3,7 +3,7 @@ const NEWS_API_KEY = 'e7eb2557a7794272b4ae7722c077e945'; // ✅ Your NewsAPI.org
 const NEWS_API_BASE_URL = 'https://newsapi.org/v2';      // ✅ Base URL for NewsAPI
 // Check if API key is configured
 function checkApiKey() {
-    if (NEWS_API_KEY === 'e7eb2557a7794272b4ae7722c077e945' || !NEWS_API_KEY) {
+    if (NEWS_API_KEY === 'pub_479521869e790a727903df673ac804ca5f7dc' || !NEWS_API_KEY) {
         showApiKeyError();
         return false;
     }
