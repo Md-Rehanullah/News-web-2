@@ -4,7 +4,6 @@ const NEWS_API_BASE_URL = 'https://newsdata.io/api/1/news';
 let currentCategory = 'top';
 let allArticles = [];
 let isLoading = false;
-let nextPageToken = null;
 
 document.addEventListener('DOMContentLoaded', () => {
   initializeEventListeners();
@@ -19,17 +18,15 @@ function initializeEventListeners() {
     });
   });
 
-  document.getElementById('loadMoreBtn').addEventListener('click', () => {
-    if (nextPageToken) loadNews(currentCategory, nextPageToken);
-  });
-
-  // 🔍 Search and ✉️ Contact buttons
+  // Search Overlay
   document.getElementById('searchBtn').addEventListener('click', () => {
     document.getElementById('searchOverlay').classList.add('active');
   });
   document.getElementById('closeSearch').addEventListener('click', () => {
     document.getElementById('searchOverlay').classList.remove('active');
   });
+
+  // Contact Overlay
   document.getElementById('contactBtn').addEventListener('click', () => {
     document.getElementById('contactOverlay').classList.add('active');
   });
@@ -37,7 +34,7 @@ function initializeEventListeners() {
     document.getElementById('contactOverlay').classList.remove('active');
   });
 
-  // ✉️ Send contact form via mailto
+  // Mailto form submission
   document.getElementById('contactForm').addEventListener('submit', function (e) {
     e.preventDefault();
     const name = this.name.value;
@@ -55,7 +52,6 @@ function initializeEventListeners() {
 function changeCategory(category) {
   if (category === currentCategory) return;
   currentCategory = category;
-  nextPageToken = null;
   allArticles = [];
   updateSectionTitle(category);
   loadNews(category);
@@ -73,25 +69,28 @@ function updateSectionTitle(category) {
   document.getElementById('sectionTitle').textContent = titles[category] || 'Latest News';
 }
 
-async function loadNews(category, pageToken = null) {
+async function loadNews(category) {
   if (isLoading) return;
   isLoading = true;
   showLoading();
 
   try {
-    const url = `${NEWS_API_BASE_URL}?apikey=${NEWS_API_KEY}&language=en${category !== 'top' ? `&category=${category}` : ''}${pageToken ? `&page=${pageToken}` : ''}`;
+    const url = `${NEWS_API_BASE_URL}?apikey=${NEWS_API_KEY}&language=en${category !== 'top' ? `&category=${category}` : ''}`;
     const response = await fetch(url);
     const data = await response.json();
 
+    console.log("API Response:", data); // Optional: keep this for debugging
+
     if (data.status === 'success' && Array.isArray(data.results)) {
       const filteredArticles = data.results.filter(article => article.title && article.link);
-      allArticles = [...allArticles, ...filteredArticles];
+      allArticles = filteredArticles;
       displayArticles(allArticles);
       document.getElementById('articleCount').textContent = allArticles.length;
-      nextPageToken = data.nextPage || null;
-      document.getElementById('loadMoreContainer').style.display = nextPageToken ? 'block' : 'none';
+
+      // Hide load more (pagination removed)
+      document.getElementById('loadMoreContainer').style.display = 'none';
     } else {
-      showError("API Error: Unexpected response format");
+      showError("API Error: " + (data?.results?.message || 'Unexpected response format'));
     }
   } catch (error) {
     showError("API Error: " + error.message);
@@ -110,6 +109,7 @@ function displayArticles(articles) {
 
   const [first, ...rest] = articles;
 
+  // Featured Article
   featuredContainer.innerHTML = `
     <div class="featured-grid">
       <img src="${first.image_url || getPlaceholderImage()}" class="featured-image">
@@ -122,6 +122,7 @@ function displayArticles(articles) {
     </div>`;
   featuredContainer.style.display = 'block';
 
+  // Grid Articles
   rest.forEach(article => {
     newsGrid.innerHTML += `
       <div class="news-card">
