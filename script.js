@@ -1,64 +1,54 @@
-const API_KEY = "0ea2bdb2e0714ed0a010339f866ae4b0";
-const url = "https://newsapi.org/v2/everything?q=";
+const apiKey = '413a076a8ec74fcaa7466d61fda84a4a'; // Replace with your actual API key
+const newsContainer = document.getElementById('news-container');
+const loadMoreButton = document.getElementById('load-more');
+const searchInput = document.getElementById('search');
+const contactForm = document.getElementById('contact-form');
+let currentPage = 1;
 
-window.addEventListener("load", () => fetchNews("Technology"));
-
-async function fetchNews(query) {
-    const res = await fetch(`${url}${query}&apiKey=${API_KEY}`);
-    const data = await res.json();
-    bindData(data.articles);
+async function fetchNews(page = 1) {
+    const response = await fetch(`https://newsapi.org/v2/top-headlines?country=in&pageSize=6&page=${page}&apiKey=${apiKey}`);
+    const data = await response.json();
+    return data.articles;
 }
 
-function bindData(articles) {
-    const cardsContainer = document.getElementById("cardscontainer");
-    const newsCardTemplate = document.getElementById("template-news-card");
-
-    cardsContainer.innerHTML = "";
-
-    articles.forEach((article) => {
-        if (!article.urlToImage) return;
-
-        const cardClone = newsCardTemplate.content.cloneNode(true);
-        fillDataInCard(cardClone, article);
-        cardsContainer.appendChild(cardClone);
-    })
+function displayNews(articles) {
+    articles.forEach(article => {
+        const articleElement = document.createElement('article');
+        articleElement.innerHTML = `
+            <h2>${article.title}</h2>
+            <p>${article.description}</p>
+            <a href="${article.url}" target="_blank">Read more</a>
+        `;
+        newsContainer.appendChild(articleElement);
+    });
 }
 
-function fillDataInCard(cardClone, article) {
-    const newsImg = cardClone.querySelector("#news-img");
-    const newsTitle = cardClone.querySelector("#news-title");
-    const newsSource = cardClone.querySelector("#news-source");
-    const newsDesc = cardClone.querySelector("#news-desc");
-
-    newsImg.src = article.urlToImage;
-    newsTitle.innerHTML = `${article.title.slice(0, 60)}...`;
-    newsDesc.innerHTML = `${article.description.slice(0, 150)}...`;
-
-    const date = new Date(article.publishedAt).toLocaleString("en-US", { timeZone: "Asia/Jakarta" })
-
-    newsSource.innerHTML = `${article.source.name} · ${date}`;
-
-    cardClone.firstElementChild.addEventListener("click", () => {
-        window.open(article.url, "_blank");
-    })
+async function loadNews() {
+    const articles = await fetchNews(currentPage);
+    displayNews(articles);
+    currentPage++;
 }
 
-let curSelectedNav = null;
-function onNavItemClick(id) {
-    fetchNews(id);
-    const navItem = document.getElementById(id);
-    curSelectedNav?.classList.remove("active");
-    curSelectedNav = navItem;
-    curSelectedNav.classList.add("active");
-}
+loadMoreButton.addEventListener('click', loadNews);
 
-const searchButton = document.getElementById("search-button");
-const searchText = document.getElementById("search-text");
+searchInput.addEventListener('input', async () => {
+    const query = searchInput.value;
+    const response = await fetch(`https://newsapi.org/v2/everything?q=${query}&apiKey=${apiKey}`);
+    const data = await response.json();
+    newsContainer.innerHTML = '';
+    displayNews(data.articles);
+});
 
-searchButton.addEventListener("click", () => {
-    const query = searchText.value;
-    if (!query) return;
-    fetchNews(query);
-    curSelectedNav?.classList.remove("active");
-    curSelectedNav = null;
-})
+contactForm.addEventListener('submit', (e) => {
+    e.preventDefault();
+    const message = contactForm.querySelector('textarea').value;
+    window.open(`mailto:mdchild21@gmail.com?subject=Message from News Website&body=${encodeURIComponent(message)}`);
+    contactForm.reset();
+});
+
+document.getElementById('go-top').addEventListener('click', () => {
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+});
+
+// Initial load
+loadNews();
