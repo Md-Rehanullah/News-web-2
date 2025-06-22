@@ -13,7 +13,7 @@ function debugApiKey() {
 // Check if API key is configured
 function checkApiKey() {
     debugApiKey();
-    if (NEWS_API_KEY === 'YOUR_NEWS_API_KEY_HERE' || !NEWS_API_KEY || NEWS_API_KEY.length < 20) {
+    if (NEWS_API_KEY === 'pub_c14cf45b18224de09cfc536dde3878cc' || !NEWS_API_KEY || NEWS_API_KEY.length < 20) {
         showApiKeyError();
         return false;
     }
