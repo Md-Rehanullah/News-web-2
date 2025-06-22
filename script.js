@@ -96,44 +96,44 @@ function updateSectionTitle(category) {
 }
 
 async function loadNews(category, page = 1) {
-    if (isLoading) return;
+  if (isLoading) return;
+  isLoading = true;
+  showLoading();
 
-    isLoading = true;
-    showLoading();
+  try {
+    const categoryParam = {
+      general: 'top',
+      world: 'world',
+      sports: 'sports',
+      technology: 'technology',
+      business: 'business',
+      entertainment: 'entertainment',
+      trending: 'top'
+    }[category] || 'top';
 
-    try {
-        const categoryMap = {
-            general: 'top',
-            world: 'world',
-            sports: 'sports',
-            technology: 'technology',
-            business: 'business',
-            entertainment: 'entertainment',
-            trending: 'top'
-        };
+    const url = `https://newsdata.io/api/1/latest?apikey=${NEWS_API_KEY}&language=en&category=${categoryParam}&page=${page}`;
+    console.log("✅ Fetching URL:", url);
 
-        const categoryParam = categoryMap[category] || 'top';
-        const url = `${NEWS_API_BASE_URL}?apikey=${NEWS_API_KEY}&language=en&category=${categoryParam}&page=${page}`;
+    const res = await fetch(url);
+    const data = await res.json();
+    console.log("✅ API Response:", data);
 
-        const response = await fetch(url);
-        const data = await response.json();
-
-        if (data && Array.isArray(data.results)) {
-            const filteredArticles = data.results.filter(a => a.title && a.link);
-            allArticles = page === 1 ? filteredArticles : [...allArticles, ...filteredArticles];
-            displayArticles();
-            updateArticleCount();
-            document.getElementById('loadMoreContainer').style.display = filteredArticles.length >= 10 ? 'block' : 'none';
-        } else {
-            showError(`API Error: ${data.message || 'Invalid response format'}`);
-        }
-    } catch (error) {
-        showError('Failed to load news. Please check your connection.');
-        console.error(error);
-    } finally {
-        isLoading = false;
-        hideLoading();
+    if (data.status === 'success' && Array.isArray(data.results)) {
+      const filtered = data.results.filter(a => a.title && a.link);
+      allArticles = page === 1 ? filtered : allArticles.concat(filtered);
+      displayArticles();
+      updateArticleCount();
+      document.getElementById('loadMoreContainer').style.display = filtered.length >= 10 ? 'block' : 'none';
+    } else {
+      showError(`API Error: ${data.message || 'Unexpected response format'}`);
     }
+  } catch (err) {
+    showError('Network error. Please try again.');
+    console.error(err);
+  } finally {
+    hideLoading();
+    isLoading = false;
+  }
 }
 
 function displayArticles() {
