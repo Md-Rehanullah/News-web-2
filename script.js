@@ -1,14 +1,49 @@
-// Configuration
-const NEWS_API_KEY = process.env.NEWS_API_KEY || '413a076a8ec74fcaa7466d61fda84a4a'; // Replace with your actual News API key
+
+// Configuration - REPLACE WITH YOUR ACTUAL API KEY
+const NEWS_API_KEY = '413a076a8ec74fcaa7466d61fda84a4a'; // Put your actual NewsAPI key here
 const NEWS_API_BASE_URL = 'https://newsapi.org/v2';
+
+// Debug function to check API key
+function debugApiKey() {
+    console.log('API Key length:', NEWS_API_KEY.length);
+    console.log('API Key starts with:', NEWS_API_KEY.substring(0, 8) + '...');
+    console.log('Is placeholder?', NEWS_API_KEY === '413a076a8ec74fcaa7466d61fda84a4a');
+}
 
 // Check if API key is configured
 function checkApiKey() {
-    if (NEWS_API_KEY === '413a076a8ec74fcaa7466d61fda84a4a' || !NEWS_API_KEY) {
+    debugApiKey();
+    if (NEWS_API_KEY === 'YOUR_NEWS_API_KEY_HERE' || !NEWS_API_KEY || NEWS_API_KEY.length < 20) {
         showApiKeyError();
         return false;
     }
     return true;
+}
+
+// Test API connection
+async function testApiConnection() {
+    try {
+        const testUrl = `${NEWS_API_BASE_URL}/top-headlines?country=us&pageSize=1&apiKey=${NEWS_API_KEY}`;
+        console.log('Testing API connection...');
+        
+        const response = await fetch(testUrl);
+        const data = await response.json();
+        
+        console.log('API Test Response:', response.status, data);
+        
+        if (data.status === 'ok') {
+            console.log('✅ API key is working correctly');
+            return true;
+        } else {
+            console.error('❌ API Error:', data.message);
+            showError(`API Error: ${data.message}`);
+            return false;
+        }
+    } catch (error) {
+        console.error('❌ Connection Error:', error);
+        showError('Failed to connect to news API. Check your internet connection.');
+        return false;
+    }
 }
 
 // State
@@ -18,28 +53,25 @@ let allArticles = [];
 let isLoading = false;
 
 // Initialize the application
-document.addEventListener('DOMContentLoaded', function() {
+document.addEventListener('DOMContentLoaded', async function() {
+    console.log('🚀 Classic Times starting up...');
+    
+    // Test API first
+    const apiWorking = await testApiConnection();
+    if (!apiWorking) return;
+    
     initializeApp();
 });
 
 function initializeApp() {
-    // Set current date
     setCurrentDate();
-    
-    // Initialize event listeners
     initializeEventListeners();
-    
-    // Load initial news
     loadNews('general');
-    
-    // Load trending news
     loadTrendingNews();
-    
-    // Initialize scroll listener
     initializeScrollListener();
 }
 
-function setCurrentDate() {
+// [Rest of the functions remain the same as in the previous script.js]function setCurrentDate() {
     const now = new Date();
     const options = {
         weekday: 'long',
