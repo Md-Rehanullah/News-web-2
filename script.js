@@ -1,13 +1,13 @@
 
 // Configuration - REPLACE WITH YOUR ACTUAL API KEY
-const NEWS_API_KEY = '413a076a8ec74fcaa7466d61fda84a4a'; // Put your actual NewsAPI key here
+const NEWS_API_KEY = 'pub_c14cf45b18224de09cfc536dde3878cc'; // Put your actual NewsAPI key here
 const NEWS_API_BASE_URL = 'https://newsapi.org/v2';
 
 // Debug function to check API key
 function debugApiKey() {
     console.log('API Key length:', NEWS_API_KEY.length);
     console.log('API Key starts with:', NEWS_API_KEY.substring(0, 8) + '...');
-    console.log('Is placeholder?', NEWS_API_KEY === '413a076a8ec74fcaa7466d61fda84a4a');
+    console.log('Is placeholder?', NEWS_API_KEY === 'pub_c14cf45b18224de09cfc536dde3878cc');
 }
 
 // Check if API key is configured
