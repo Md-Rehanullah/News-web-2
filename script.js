@@ -1,209 +1,106 @@
 // Configuration
-const NEWS_API_KEY = 'pub_479521869e790a727903df673ac804ca5f7dc';
-const NEWS_API_BASE_URL = 'https://newsdata.io/api/1/news';
+const API_KEY = 'pub_479521869e790a727903df673ac804ca5f7dc';
+const BASE_URL = 'https://newsdata.io/api/1/news';
 
-// State
-let currentCategory = 'top';
+// App State
+let currentCategory = 'top'; // Default category
 let currentPage = 1;
 let allArticles = [];
 let isLoading = false;
 
-// Initialize
-document.addEventListener('DOMContentLoaded', function () {
-    setCurrentDate();
-    initializeEventListeners();
-    loadNews(currentCategory);
-    initializeScrollListener();
+// Initialize app
+document.addEventListener('DOMContentLoaded', () => {
+  initializeEventListeners();
+  loadNews(currentCategory);
 });
 
-// Set current date
-function setCurrentDate() {
-    const now = new Date();
-    const options = { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' };
-    document.getElementById('currentDate').textContent = now.toLocaleDateString('en-US', options);
-}
-
-// Change category
-function changeCategory(category) {
-    currentCategory = category;
-    currentPage = 1;
-    allArticles = [];
-    updateActiveButtons(category);
-    updateSectionTitle(category);
-    loadNews(category);
-}
-
-// Update buttons
-function updateActiveButtons(category) {
-    document.querySelectorAll('.nav-btn, .category-btn, .mobile-nav-btn').forEach(btn => {
-        btn.classList.remove('active');
-        if (btn.dataset.category === category) btn.classList.add('active');
+function initializeEventListeners() {
+  document.querySelectorAll('[data-category]').forEach(btn => {
+    btn.addEventListener('click', () => {
+      const category = btn.dataset.category;
+      if (category && category !== currentCategory) {
+        currentCategory = category;
+        currentPage = 1;
+        allArticles = [];
+        loadNews(currentCategory);
+      }
     });
+  });
+
+  document.getElementById('loadMoreBtn').addEventListener('click', () => {
+    currentPage++;
+    loadNews(currentCategory, currentPage);
+  });
 }
 
-// Section titles
-function updateSectionTitle(category) {
-    const titles = {
-        general: 'General News',
-        world: 'International News',
-        sports: 'Sports News',
-        technology: 'Technology News',
-        business: 'Business News',
-        entertainment: 'Entertainment News',
-        trending: 'Trending News',
-        top: 'Top Headlines'
-    };
-    document.getElementById('sectionTitle').textContent = titles[category] || 'Latest News';
-}
+async function loadNews(category, page = 1) {
+  if (isLoading) return;
+  isLoading = true;
 
-// Load news
-async function loadNews(category = 'top', page = 1) {
-  console.clear();
-  console.log("➡️ loadNews called", { category, page });
-
-  const url = `https://newsdata.io/api/1/news?apikey=${NEWS_API_KEY}&language=en&category=${category}&page=${page}`;
-  console.log("🔗 Fetch URL:", url);
+  showLoading();
 
   try {
-    const res = await fetch(url, { cache: "no-store" });
-    console.log("📥 Response status:", res.status, res.statusText);
+    const url = `${BASE_URL}?apikey=${API_KEY}&language=en&category=${category}&page=${page}`;
 
-    const text = await res.text();
-    console.log("📄 Raw response:", text);
+    const response = await fetch(url);
+    const data = await response.json();
 
-    let data;
-    try {
-      data = JSON.parse(text);
-    } catch (e) {
-      console.error("❌ JSON parse failed:", e);
-      showError("Invalid JSON response");
-      return;
+    if (data.status === 'success' && Array.isArray(data.results)) {
+      const filtered = data.results.filter(a => a.title && a.link);
+      allArticles = [...allArticles, ...filtered];
+      renderArticles();
+      updateArticleCount();
+    } else {
+      showError(`API Error: ${data?.results?.message || 'Unexpected response format'}`);
     }
-    console.log("✅ Parsed data:", data);
-
-    if (!data || typeof data !== 'object') {
-      showError("Empty or invalid response");
-      return;
-    }
-
-    // STOP HERE and share the console content with me.
   } catch (err) {
-    console.error("🌐 Fetch Error:", err);
-    showError("Network error: " + err.message);
+    showError('Failed to fetch articles. Please check your internet or try again.');
+    console.error(err);
+  } finally {
+    isLoading = false;
+    hideLoading();
   }
 }
 
-// Display articles
-function displayArticles() {
-    const featured = allArticles[0];
-    const rest = allArticles.slice(1);
-
-    if (featured) displayFeaturedArticle(featured);
-    displayNewsGrid(rest);
-}
-
-// Featured
-function displayFeaturedArticle(article) {
-    const container = document.getElementById('featuredArticle');
-    const date = new Date(article.pubDate).toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' });
-
-    container.innerHTML = `
-        <div class="featured-grid">
-            <div>
-                <img src="${article.image_url || getPlaceholderImage()}" alt="${article.title}" class="featured-image">
-            </div>
-            <div class="featured-content">
-                <div class="featured-tag">FEATURED STORY</div>
-                <h2 class="featured-title">${article.title}</h2>
-                <p class="featured-description">${article.description || 'No description available.'}</p>
-                <div class="featured-meta">
-                    <div class="article-meta"><span>${article.source_id}</span> • <span>${date}</span></div>
-                    <button class="btn-primary" onclick="readMore('${article.link}')">Read More</button>
-                </div>
-            </div>
+function renderArticles() {
+  const grid = document.getElementById('newsGrid');
+  grid.innerHTML = allArticles.map(article => `
+    <div class="news-card">
+      <div class="news-image-container">
+        <img src="${article.image_url || getPlaceholderImage()}" onerror="this.src='${getPlaceholderImage()}'" class="news-image">
+      </div>
+      <div class="news-content">
+        <h3 class="news-title">${article.title}</h3>
+        <p class="news-description">${article.description || 'No description available.'}</p>
+        <div class="news-footer">
+          <span class="news-date">${new Date(article.pubDate).toLocaleDateString()}</span>
+          <a href="${article.link}" target="_blank" class="read-more-btn">Read More →</a>
         </div>
-    `;
-    container.style.display = 'block';
+      </div>
+    </div>
+  `).join('');
 }
 
-// Grid
-function displayNewsGrid(articles) {
-    const grid = document.getElementById('newsGrid');
-    grid.innerHTML = articles.map(article => `
-        <div class="news-card">
-            <div class="news-image-container">
-                <img src="${article.image_url || getPlaceholderImage()}" alt="${article.title}" class="news-image">
-                <div class="news-source-tag">${article.source_id}</div>
-            </div>
-            <div class="news-content">
-                <h3 class="news-title">${article.title}</h3>
-                <p class="news-description">${article.description || 'No description available.'}</p>
-                <div class="news-footer">
-                    <span class="news-date">${new Date(article.pubDate).toLocaleDateString()}</span>
-                    <button class="read-more-btn" onclick="readMore('${article.link}')">Read More →</button>
-                </div>
-            </div>
-        </div>
-    `).join('');
-}
-
-// Load More
-function loadMoreArticles() {
-    currentPage++;
-    loadNews(currentCategory, currentPage);
-}
-
-// Helpers
 function updateArticleCount() {
-    document.getElementById('articleCount').textContent = allArticles.length;
-}
-
-function getPlaceholderImage() {
-    return 'https://via.placeholder.com/800x600?text=No+Image';
-}
-
-function readMore(url) {
-    window.open(url, '_blank');
+  document.getElementById('articleCount').textContent = allArticles.length;
 }
 
 function showLoading() {
-    document.getElementById('loading').style.display = 'block';
-    document.getElementById('error').style.display = 'none';
-    document.getElementById('featuredArticle').style.display = 'none';
-    document.getElementById('newsGrid').innerHTML = '';
+  document.getElementById('loading').style.display = 'block';
+  document.getElementById('error').style.display = 'none';
+  document.getElementById('newsGrid').innerHTML = '';
 }
 
 function hideLoading() {
-    document.getElementById('loading').style.display = 'none';
+  document.getElementById('loading').style.display = 'none';
 }
 
-function showError(message = 'API Error') {
-    document.getElementById('loading').style.display = 'none';
-    const error = document.getElementById('error');
-    error.querySelector('p').textContent = message;
-    error.style.display = 'block';
+function showError(msg) {
+  const errorBox = document.getElementById('error');
+  errorBox.querySelector('p').textContent = msg;
+  errorBox.style.display = 'block';
 }
 
-// Scroll to top
-function initializeScrollListener() {
-    window.addEventListener('scroll', () => {
-        document.getElementById('goToTopBtn').classList.toggle('visible', window.scrollY > 300);
-    });
-}
-
-function scrollToTop() {
-    window.scrollTo({ top: 0, behavior: 'smooth' });
-}
-
-// Event listeners
-function initializeEventListeners() {
-    document.querySelectorAll('.nav-btn, .category-btn, .mobile-nav-btn').forEach(btn => {
-        btn.addEventListener('click', e => {
-            const category = e.target.getAttribute('data-category');
-            if (category) changeCategory(category);
-        });
-    });
-
-    document.getElementById('loadMoreBtn').addEventListener('click', loadMoreArticles);
-    document.getElementById('goToTopBtn').addEventListener('click', scrollToTop);
+function getPlaceholderImage() {
+  return 'https://via.placeholder.com/600x400.png?text=No+Image';
 }
