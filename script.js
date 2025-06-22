@@ -1,4 +1,4 @@
-const apiKey = '413a076a8ec74fcaa7466d61fda84a4a'; // Replace with your actual API key
+const apiKey = 'pub_479521869e790a727903df673ac804ca5f7dc'; // Replace with your actual API key
 const newsContainer = document.getElementById('news-container');
 const loadMoreButton = document.getElementById('load-more');
 const searchInput = document.getElementById('search');
