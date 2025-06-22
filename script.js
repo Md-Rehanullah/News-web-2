@@ -1,7 +1,6 @@
 // Configuration
-const NEWS_API_KEY = 'pub_479521869e790a727903df673ac804ca5f7dc'; // Replace with your actual News API key
-const NEWS_API_BASE_URL = 'https://newsapi.org/v2/everything?q=tesla&from=2025-05-22&sortBy=publishedAt&apiKey=e7eb2557a7794272b4ae7722c077e945';
-
+const NEWS_API_KEY = 'e7eb2557a7794272b4ae7722c077e945'; // ✅ Your NewsAPI.org key
+const NEWS_API_BASE_URL = 'https://newsapi.org/v2';      // ✅ Base URL for NewsAPI
 // Check if API key is configured
 function checkApiKey() {
     if (NEWS_API_KEY === 'pub_479521869e790a727903df673ac804ca5f7dc' || !NEWS_API_KEY) {
@@ -170,58 +169,42 @@ function updateSectionTitle(category) {
 
 async function loadNews(category, page = 1) {
     if (isLoading) return;
-    
     if (!checkApiKey()) return;
-    
+
     isLoading = true;
     showLoading();
-    
+
     try {
         let url;
-        
         if (category === 'trending') {
             url = `${NEWS_API_BASE_URL}/top-headlines?country=us&pageSize=12&page=${page}&apiKey=${NEWS_API_KEY}`;
-        } else if (category === 'world') {
-            url = `${NEWS_API_BASE_URL}/top-headlines?category=general&pageSize=12&page=${page}&apiKey=${NEWS_API_KEY}`;
         } else {
             url = `${NEWS_API_BASE_URL}/top-headlines?category=${category}&country=us&pageSize=12&page=${page}&apiKey=${NEWS_API_KEY}`;
         }
-        
-        const response = await fetch(url, {
-            method: 'GET',
-            headers: {
-                'X-API-Key': NEWS_API_KEY
-            }
-        });
-        
+
+        const response = await fetch(url);
         const data = await response.json();
-        
+
         if (data.status === 'ok') {
             const filteredArticles = filterArticles(data.articles);
-            
+
             if (page === 1) {
                 allArticles = filteredArticles;
             } else {
                 allArticles = [...allArticles, ...filteredArticles];
             }
-            
+
             displayArticles();
             updateArticleCount();
-            
-            // Show/hide load more button
-            const loadMoreContainer = document.getElementById('loadMoreContainer');
-            if (filteredArticles.length >= 12) {
-                loadMoreContainer.style.display = 'block';
-            } else {
-                loadMoreContainer.style.display = 'none';
-            }
+
+            document.getElementById('loadMoreContainer').style.display =
+                filteredArticles.length >= 12 ? 'block' : 'none';
         } else {
-            console.error('API Error:', data);
-            showError(`Error: ${data.message || 'Failed to load news'}`);
+            showError(`API Error: ${data.message}`);
         }
-    } catch (error) {
-        console.error('Error loading news:', error);
-        showError('Failed to load news. Please check your internet connection and API key.');
+    } catch (err) {
+        showError('Failed to load news. Check your connection and try again.');
+        console.error(err);
     } finally {
         isLoading = false;
         hideLoading();
@@ -230,17 +213,12 @@ async function loadNews(category, page = 1) {
 
 async function loadTrendingNews() {
     if (!checkApiKey()) return;
-    
+
     try {
         const url = `${NEWS_API_BASE_URL}/top-headlines?country=us&pageSize=5&apiKey=${NEWS_API_KEY}`;
-        const response = await fetch(url, {
-            method: 'GET',
-            headers: {
-                'X-API-Key': NEWS_API_KEY
-            }
-        });
+        const response = await fetch(url);
         const data = await response.json();
-        
+
         if (data.status === 'ok') {
             const filteredArticles = filterArticles(data.articles);
             displayTrendingArticles(filteredArticles.slice(0, 5));
@@ -368,22 +346,16 @@ function loadMoreArticles() {
 async function performSearch() {
     const query = document.getElementById('searchInput').value.trim();
     if (!query) return;
-    
     if (!checkApiKey()) return;
-    
+
     const searchResults = document.getElementById('searchResults');
     searchResults.innerHTML = '<div class="loading"><div class="spinner"></div><p>Searching...</p></div>';
-    
+
     try {
         const url = `${NEWS_API_BASE_URL}/everything?q=${encodeURIComponent(query)}&pageSize=10&sortBy=relevancy&apiKey=${NEWS_API_KEY}`;
-        const response = await fetch(url, {
-            method: 'GET',
-            headers: {
-                'X-API-Key': NEWS_API_KEY
-            }
-        });
+        const response = await fetch(url);
         const data = await response.json();
-        
+
         if (data.status === 'ok') {
             const filteredArticles = filterArticles(data.articles);
             displaySearchResults(filteredArticles, query);
