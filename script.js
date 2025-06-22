@@ -3,232 +3,244 @@ const NEWS_API_KEY = 'pub_479521869e790a727903df673ac804ca5f7dc';
 const NEWS_API_BASE_URL = 'https://newsdata.io/api/1/news';
 
 // State
-let currentCategory = 'top';
+let currentCategory = 'general';
 let currentPage = 1;
 let allArticles = [];
 let isLoading = false;
 
-// Initialize
-document.addEventListener('DOMContentLoaded', () => {
+// Initialize the application
+document.addEventListener('DOMContentLoaded', initializeApp);
+
+function initializeApp() {
     setCurrentDate();
     initializeEventListeners();
     loadNews(currentCategory);
-    loadTrendingNews();
-});
+    initializeScrollListener();
+}
 
-// Set current date
 function setCurrentDate() {
     const now = new Date();
     const options = { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' };
     document.getElementById('currentDate').textContent = now.toLocaleDateString('en-US', options);
 }
 
-// Event listeners
 function initializeEventListeners() {
-    document.querySelectorAll('[data-category]').forEach(btn => {
-        btn.addEventListener('click', () => {
-            const category = btn.getAttribute('data-category');
-            changeCategory(category);
+    document.querySelectorAll('.nav-btn, .category-btn, .mobile-nav-btn').forEach(btn => {
+        btn.addEventListener('click', e => {
+            const category = e.target.getAttribute('data-category');
+            if (category) changeCategory(category);
         });
     });
 
-    document.getElementById('loadMoreBtn').addEventListener('click', () => {
-        currentPage++;
-        loadNews(currentCategory, currentPage);
-    });
+    document.getElementById('mobileMenuBtn').onclick = () => document.getElementById('mobileMenuOverlay').classList.add('active');
+    document.getElementById('closeMobileMenu').onclick = () => document.getElementById('mobileMenuOverlay').classList.remove('active');
 
-    document.getElementById('searchSubmitBtn').addEventListener('click', performSearch);
-    document.getElementById('searchInput').addEventListener('keypress', (e) => {
+    document.getElementById('searchBtn').onclick = () => document.getElementById('searchOverlay').classList.add('active');
+    document.getElementById('closeSearch').onclick = () => {
+        document.getElementById('searchOverlay').classList.remove('active');
+        clearSearchResults();
+    };
+
+    document.getElementById('searchSubmitBtn').onclick = performSearch;
+    document.getElementById('searchInput').addEventListener('keypress', e => {
         if (e.key === 'Enter') performSearch();
     });
 
-    document.getElementById('contactForm').addEventListener('submit', e => {
-        e.preventDefault();
-        alert('Thank you! Your message has been received.');
-        e.target.reset();
-        document.getElementById('contactOverlay').classList.remove('active');
+    document.getElementById('contactBtn').onclick = () => document.getElementById('contactOverlay').classList.add('active');
+    document.getElementById('closeContact').onclick = () => document.getElementById('contactOverlay').classList.remove('active');
+    document.getElementById('contactForm').addEventListener('submit', handleContactSubmit);
+
+    document.getElementById('loadMoreBtn').onclick = loadMoreArticles;
+    document.getElementById('goToTopBtn').onclick = () => window.scrollTo({ top: 0, behavior: 'smooth' });
+
+    document.addEventListener('click', e => {
+        if (e.target.classList.contains('mobile-menu-overlay') || e.target.classList.contains('search-overlay') || e.target.classList.contains('contact-overlay')) {
+            e.target.classList.remove('active');
+        }
     });
 }
 
-// Change category
+function initializeScrollListener() {
+    window.addEventListener('scroll', () => {
+        const goToTopBtn = document.getElementById('goToTopBtn');
+        goToTopBtn.classList.toggle('visible', window.pageYOffset > 300);
+    });
+}
+
 function changeCategory(category) {
     if (category === currentCategory) return;
     currentCategory = category;
     currentPage = 1;
     allArticles = [];
-    updateSectionTitle(category);
     updateActiveButtons(category);
+    updateSectionTitle(category);
     loadNews(category);
 }
 
-// Update UI
+function updateActiveButtons(category) {
+    document.querySelectorAll('.nav-btn, .category-btn, .mobile-nav-btn').forEach(btn => btn.classList.remove('active'));
+    document.querySelectorAll(`[data-category="${category}"]`).forEach(btn => btn.classList.add('active'));
+}
+
 function updateSectionTitle(category) {
     const titles = {
-        top: 'Top Headlines',
+        general: 'Latest News',
+        world: 'International News',
         sports: 'Sports News',
+        technology: 'Technology News',
         business: 'Business News',
         entertainment: 'Entertainment News',
-        technology: 'Technology News',
-        world: 'World News'
+        trending: 'Trending News'
     };
     document.getElementById('sectionTitle').textContent = titles[category] || 'Latest News';
 }
 
-function updateActiveButtons(category) {
-    document.querySelectorAll('[data-category]').forEach(btn => {
-        btn.classList.remove('active');
-    });
-    document.querySelectorAll(`[data-category="${category}"]`).forEach(btn => {
-        btn.classList.add('active');
-    });
-}
-
-// Load News
 async function loadNews(category, page = 1) {
     if (isLoading) return;
+
     isLoading = true;
     showLoading();
 
     try {
-        const url = `${NEWS_API_BASE_URL}?apikey=${NEWS_API_KEY}&category=${category}&language=en&page=${page}`;
+        const categoryMap = {
+            general: 'top',
+            world: 'world',
+            sports: 'sports',
+            technology: 'technology',
+            business: 'business',
+            entertainment: 'entertainment',
+            trending: 'top'
+        };
+
+        const categoryParam = categoryMap[category] || 'top';
+        const url = `${NEWS_API_BASE_URL}?apikey=${NEWS_API_KEY}&language=en&category=${categoryParam}&page=${page}`;
+
         const response = await fetch(url);
         const data = await response.json();
 
-        if (!data.results || data.results.length === 0) {
-            showError('No articles found.');
-            return;
+        if (data && Array.isArray(data.results)) {
+            const filteredArticles = data.results.filter(a => a.title && a.link);
+            allArticles = page === 1 ? filteredArticles : [...allArticles, ...filteredArticles];
+            displayArticles();
+            updateArticleCount();
+            document.getElementById('loadMoreContainer').style.display = filteredArticles.length >= 10 ? 'block' : 'none';
+        } else {
+            showError(`API Error: ${data.message || 'Invalid response format'}`);
         }
-
-        const newArticles = data.results.filter(a => a.title && a.link);
-        allArticles = [...allArticles, ...newArticles];
-        displayArticles();
-        updateArticleCount();
-
-        document.getElementById('loadMoreContainer').style.display =
-            newArticles.length >= 10 ? 'block' : 'none';
     } catch (error) {
-        showError('API Error: ' + (error.message || 'Unknown error'));
+        showError('Failed to load news. Please check your connection.');
+        console.error(error);
     } finally {
-        hideLoading();
         isLoading = false;
+        hideLoading();
     }
 }
 
-// Load Trending
-async function loadTrendingNews() {
-    try {
-        const url = `${NEWS_API_BASE_URL}?apikey=${NEWS_API_KEY}&language=en&country=us&category=top&page=1`;
-        const response = await fetch(url);
-        const data = await response.json();
-
-        const topArticles = (data.results || []).slice(0, 5);
-        displayTrendingArticles(topArticles);
-    } catch (err) {
-        console.error('Trending news failed.', err);
-    }
-}
-
-// Display Articles
 function displayArticles() {
-    const [featured, ...rest] = allArticles;
+    const featured = allArticles[0];
+    const others = allArticles.slice(1);
     if (featured) displayFeaturedArticle(featured);
-    displayNewsGrid(rest);
+    displayNewsGrid(others);
 }
 
 function displayFeaturedArticle(article) {
-    const featuredContainer = document.getElementById('featuredArticle');
-    featuredContainer.innerHTML = `
+    const featured = document.getElementById('featuredArticle');
+    const date = new Date(article.pubDate).toLocaleDateString('en-US');
+    featured.innerHTML = `
         <div class="featured-grid">
-            <div>
-                <img src="${article.image_url || getPlaceholderImage()}" class="featured-image" onerror="this.src='${getPlaceholderImage()}'">
-            </div>
+            <div><img src="${article.image_url || getPlaceholderImage()}" class="featured-image" onerror="this.src='${getPlaceholderImage()}'"></div>
             <div class="featured-content">
                 <div class="featured-tag">FEATURED STORY</div>
                 <h2 class="featured-title">${article.title}</h2>
                 <p class="featured-description">${article.description || 'No description available.'}</p>
                 <div class="featured-meta">
                     <div class="article-meta">
-                        <span>${article.source_id}</span> • <span>${new Date(article.pubDate).toLocaleDateString()}</span>
+                        <span>${article.source_id || 'News'}</span> • <span>${date}</span>
                     </div>
                     <button class="btn-primary" onclick="readMore('${article.link}')">Read More</button>
                 </div>
             </div>
-        </div>
-    `;
-    featuredContainer.style.display = 'block';
+        </div>`;
+    featured.style.display = 'block';
 }
 
 function displayNewsGrid(articles) {
     const grid = document.getElementById('newsGrid');
-    grid.innerHTML = articles.map(article => `
-        <div class="news-card">
-            <div class="news-image-container">
-                <img src="${article.image_url || getPlaceholderImage()}" class="news-image" onerror="this.src='${getPlaceholderImage()}'">
-                <div class="news-source-tag">${article.source_id}</div>
-            </div>
-            <div class="news-content">
-                <h3 class="news-title">${article.title}</h3>
-                <p class="news-description">${article.description || 'No description available.'}</p>
-                <div class="news-footer">
-                    <span class="news-date">${new Date(article.pubDate).toLocaleDateString()}</span>
-                    <button class="read-more-btn" onclick="readMore('${article.link}')">Read More →</button>
+    grid.innerHTML = articles.map(article => {
+        const date = new Date(article.pubDate).toLocaleDateString('en-US');
+        return `
+            <div class="news-card">
+                <div class="news-image-container">
+                    <img src="${article.image_url || getPlaceholderImage()}" class="news-image" onerror="this.src='${getPlaceholderImage()}'">
+                    <div class="news-source-tag">${article.source_id}</div>
                 </div>
-            </div>
-        </div>
-    `).join('');
+                <div class="news-content">
+                    <h3 class="news-title">${article.title}</h3>
+                    <p class="news-description">${article.description || ''}</p>
+                    <div class="news-footer">
+                        <span class="news-date">${date}</span>
+                        <button class="read-more-btn" onclick="readMore('${article.link}')">Read More →</button>
+                    </div>
+                </div>
+            </div>`;
+    }).join('');
 }
 
-function displayTrendingArticles(articles) {
-    const list = document.getElementById('trendingList');
-    list.innerHTML = articles.map((a, i) => `
-        <div class="trending-item">
-            <div class="trending-number">${i + 1}</div>
-            <div class="trending-content">
-                <h4 class="trending-title">${a.title}</h4>
-                <div class="trending-footer">
-                    <span class="trending-source">${a.source_id}</span>
-                    <button class="read-more-btn" onclick="readMore('${a.link}')">Read →</button>
-                </div>
-            </div>
-        </div>
-    `).join('');
+function loadMoreArticles() {
+    currentPage++;
+    loadNews(currentCategory, currentPage);
 }
 
-// Search
 async function performSearch() {
     const query = document.getElementById('searchInput').value.trim();
     if (!query) return;
 
-    const container = document.getElementById('searchResults');
-    container.innerHTML = '<div class="loading"><p>Searching...</p></div>';
+    const resultsContainer = document.getElementById('searchResults');
+    resultsContainer.innerHTML = '<div class="loading"><div class="spinner"></div><p>Searching...</p></div>';
 
     try {
         const url = `${NEWS_API_BASE_URL}?apikey=${NEWS_API_KEY}&q=${encodeURIComponent(query)}&language=en`;
-        const res = await fetch(url);
-        const data = await res.json();
+        const response = await fetch(url);
+        const data = await response.json();
 
-        if (data.results && data.results.length > 0) {
-            container.innerHTML = data.results.map(article => `
-                <div class="search-result-item">
-                    <h4 class="search-result-title" onclick="readMore('${article.link}')">${article.title}</h4>
-                    <p class="search-result-description">${article.description || ''}</p>
-                    <div class="search-result-footer">
-                        <span class="search-result-source">${article.source_id}</span>
-                        <button class="read-more-btn" onclick="readMore('${article.link}')">Read More →</button>
-                    </div>
-                </div>
-            `).join('');
+        if (data && Array.isArray(data.results)) {
+            displaySearchResults(data.results, query);
         } else {
-            container.innerHTML = `<p>No results for "${query}"</p>`;
+            resultsContainer.innerHTML = `<p>No articles found for "${query}"</p>`;
         }
-    } catch (e) {
-        container.innerHTML = '<p>Error during search.</p>';
+    } catch (error) {
+        resultsContainer.innerHTML = '<p>Search failed. Please try again.</p>';
+        console.error(error);
     }
 }
 
-// Utility
-function updateArticleCount() {
-    document.getElementById('articleCount').textContent = allArticles.length;
+function displaySearchResults(articles, query) {
+    const results = document.getElementById('searchResults');
+    if (articles.length === 0) {
+        results.innerHTML = `<p>No results for "${query}"</p>`;
+        return;
+    }
+    results.innerHTML = articles.map(a => `
+        <div class="search-result-item">
+            <h4 class="search-result-title" onclick="readMore('${a.link}')">${a.title}</h4>
+            <p class="search-result-description">${a.description || ''}</p>
+            <div class="search-result-footer">
+                <span class="search-result-source">${a.source_id}</span>
+                <button class="read-more-btn" onclick="readMore('${a.link}')">Read More →</button>
+            </div>
+        </div>`).join('');
+}
+
+function clearSearchResults() {
+    document.getElementById('searchInput').value = '';
+    document.getElementById('searchResults').innerHTML = '';
+}
+
+function handleContactSubmit(e) {
+    e.preventDefault();
+    alert('Thank you! We’ll get back to you soon.');
+    e.target.reset();
+    document.getElementById('contactOverlay').classList.remove('active');
 }
 
 function readMore(url) {
@@ -238,20 +250,27 @@ function readMore(url) {
 function showLoading() {
     document.getElementById('loading').style.display = 'block';
     document.getElementById('error').style.display = 'none';
+    document.getElementById('featuredArticle').style.display = 'none';
+    document.getElementById('newsGrid').innerHTML = '';
 }
 
 function hideLoading() {
     document.getElementById('loading').style.display = 'none';
 }
 
-function showError(msg) {
-    const errorBox = document.getElementById('error');
-    errorBox.querySelector('p').textContent = msg;
-    errorBox.style.display = 'block';
+function showError(message) {
+    document.getElementById('loading').style.display = 'none';
+    const errorDiv = document.getElementById('error');
+    errorDiv.querySelector('p').textContent = message;
+    errorDiv.style.display = 'block';
     document.getElementById('featuredArticle').style.display = 'none';
     document.getElementById('newsGrid').innerHTML = '';
 }
 
+function updateArticleCount() {
+    document.getElementById('articleCount').textContent = allArticles.length;
+}
+
 function getPlaceholderImage() {
-    return 'https://via.placeholder.com/800x600.png?text=No+Image';
+    return 'https://via.placeholder.com/400x250?text=No+Image';
 }
