@@ -1,6 +1,6 @@
 // Configuration
 const NEWS_API_KEY = 'pub_479521869e790a727903df673ac804ca5f7dc'; // Replace with your actual News API key
-const NEWS_API_BASE_URL = 'https://newsapi.org/v2';
+const NEWS_API_BASE_URL = 'https://newsapi.org/v2/everything?q=tesla&from=2025-05-22&sortBy=publishedAt&apiKey=e7eb2557a7794272b4ae7722c077e945';
 
 // Check if API key is configured
 function checkApiKey() {
