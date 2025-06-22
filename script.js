@@ -1,106 +1,95 @@
-// Configuration
-const API_KEY = 'pub_479521869e790a727903df673ac804ca5f7dc';
-const BASE_URL = 'https://newsdata.io/api/1/news';
+// Configuration for NewsData.io
+const NEWS_API_KEY = 'pub_479521869e790a727903df673ac804ca5f7dc';
+const NEWS_API_BASE_URL = 'https://newsdata.io/api/1/news';
 
-// App State
-let currentCategory = 'top'; // Default category
+// Supported categories by NewsData.io
+const validCategories = ['top', 'world', 'sports', 'technology', 'business', 'entertainment'];
+
+// State variables
+let currentCategory = 'top';
 let currentPage = 1;
 let allArticles = [];
 let isLoading = false;
+let nextPageToken = null;
 
-// Initialize app
-document.addEventListener('DOMContentLoaded', () => {
-  initializeEventListeners();
-  loadNews(currentCategory);
+document.addEventListener('DOMContentLoaded', function () {
+    loadNews(currentCategory);
 });
 
-function initializeEventListeners() {
-  document.querySelectorAll('[data-category]').forEach(btn => {
-    btn.addEventListener('click', () => {
-      const category = btn.dataset.category;
-      if (category && category !== currentCategory) {
-        currentCategory = category;
-        currentPage = 1;
-        allArticles = [];
-        loadNews(currentCategory);
-      }
-    });
-  });
-
-  document.getElementById('loadMoreBtn').addEventListener('click', () => {
-    currentPage++;
-    loadNews(currentCategory, currentPage);
-  });
+function changeCategory(category) {
+    if (category === currentCategory) return;
+    currentCategory = category;
+    currentPage = 1;
+    nextPageToken = null;
+    allArticles = [];
+    loadNews(currentCategory);
 }
 
-async function loadNews(category, page = 1) {
-  if (isLoading) return;
-  isLoading = true;
+async function loadNews(category, pageToken = null) {
+    if (isLoading) return;
+    isLoading = true;
+    showLoading();
 
-  showLoading();
+    try {
+        const categoryParam = validCategories.includes(category) ? `&category=${category}` : '';
+        const pageParam = pageToken ? `&page=${pageToken}` : '';
+        const url = `${NEWS_API_BASE_URL}?apikey=${NEWS_API_KEY}&language=en${categoryParam}${pageParam}`;
 
-  try {
-    const url = `${BASE_URL}?apikey=${API_KEY}&language=en&category=${category}&page=${page}`;
+        const response = await fetch(url);
+        const data = await response.json();
 
-    const response = await fetch(url);
-    const data = await response.json();
-
-    if (data.status === 'success' && Array.isArray(data.results)) {
-      const filtered = data.results.filter(a => a.title && a.link);
-      allArticles = [...allArticles, ...filtered];
-      renderArticles();
-      updateArticleCount();
-    } else {
-      showError(`API Error: ${data?.results?.message || 'Unexpected response format'}`);
+        if (data.status === 'success' && Array.isArray(data.results)) {
+            const filteredArticles = data.results.filter(article => article.title && article.link);
+            allArticles = allArticles.concat(filteredArticles);
+            displayArticles(allArticles);
+            nextPageToken = data.nextPage || null;
+            document.getElementById('loadMoreContainer').style.display = nextPageToken ? 'block' : 'none';
+        } else {
+            showError('API Error: Unexpected response format');
+            console.error('API Error:', data);
+        }
+    } catch (error) {
+        showError('API Error: ' + error.message);
+        console.error(error);
+    } finally {
+        isLoading = false;
+        hideLoading();
     }
-  } catch (err) {
-    showError('Failed to fetch articles. Please check your internet or try again.');
-    console.error(err);
-  } finally {
-    isLoading = false;
-    hideLoading();
-  }
 }
 
-function renderArticles() {
-  const grid = document.getElementById('newsGrid');
-  grid.innerHTML = allArticles.map(article => `
-    <div class="news-card">
-      <div class="news-image-container">
-        <img src="${article.image_url || getPlaceholderImage()}" onerror="this.src='${getPlaceholderImage()}'" class="news-image">
-      </div>
-      <div class="news-content">
-        <h3 class="news-title">${article.title}</h3>
-        <p class="news-description">${article.description || 'No description available.'}</p>
-        <div class="news-footer">
-          <span class="news-date">${new Date(article.pubDate).toLocaleDateString()}</span>
-          <a href="${article.link}" target="_blank" class="read-more-btn">Read More →</a>
+function loadMoreArticles() {
+    if (nextPageToken) {
+        loadNews(currentCategory, nextPageToken);
+    }
+}
+
+function displayArticles(articles) {
+    const newsGrid = document.getElementById('newsGrid');
+    newsGrid.innerHTML = articles.map(article => `
+        <div class="news-card">
+            <div class="news-image-container">
+                <img src="${article.image_url || 'https://via.placeholder.com/300x200'}" alt="${article.title}">
+            </div>
+            <div class="news-content">
+                <h3 class="news-title">${article.title}</h3>
+                <p class="news-description">${article.description || 'No description available.'}</p>
+                <a href="${article.link}" target="_blank" class="read-more-btn">Read More â</a>
+            </div>
         </div>
-      </div>
-    </div>
-  `).join('');
-}
-
-function updateArticleCount() {
-  document.getElementById('articleCount').textContent = allArticles.length;
+    `).join('');
 }
 
 function showLoading() {
-  document.getElementById('loading').style.display = 'block';
-  document.getElementById('error').style.display = 'none';
-  document.getElementById('newsGrid').innerHTML = '';
+    document.getElementById('loading').style.display = 'block';
+    document.getElementById('error').style.display = 'none';
 }
 
 function hideLoading() {
-  document.getElementById('loading').style.display = 'none';
+    document.getElementById('loading').style.display = 'none';
 }
 
-function showError(msg) {
-  const errorBox = document.getElementById('error');
-  errorBox.querySelector('p').textContent = msg;
-  errorBox.style.display = 'block';
-}
-
-function getPlaceholderImage() {
-  return 'https://via.placeholder.com/600x400.png?text=No+Image';
+function showError(message) {
+    const errorEl = document.getElementById('error');
+    errorEl.style.display = 'block';
+    errorEl.querySelector('p').textContent = message;
 }
